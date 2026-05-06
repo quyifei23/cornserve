@@ -1,5 +1,10 @@
 FROM ubuntu:24.04
 
+ENV PIP_INDEX_URL=https://mirrors.ustc.edu.cn/pypi/web/simple
+
+RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirrors.ustc.edu.cn/ubuntu/|g' /etc/apt/sources.list.d/ubuntu.sources \
+    && sed -i 's|http://security.ubuntu.com/ubuntu/|http://mirrors.ustc.edu.cn/ubuntu/|g' /etc/apt/sources.list.d/ubuntu.sources
+
 RUN apt-get update -y \
     && apt-get install -y --no-install-recommends \
         curl \

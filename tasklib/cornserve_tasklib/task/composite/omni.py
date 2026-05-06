@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 from cornserve.task.base import Stream, Task
 
@@ -36,9 +36,7 @@ class OmniInput(OpenAIChatCompletionRequest):
 
     def model_post_init(self, context: Any, /) -> None:
         """Validate the model."""
-        assert self.model in {"Qwen/Qwen3-Omni-30B-A3B-Instruct"}, (
-            f"Only Qwen/Qwen3-Omni-30B-A3B-Instruct is supported, got {self.model}"
-        )
+        # Allow any model_id (local paths, custom HuggingFace repos, etc.)
 
 
 class OmniTask(Task[OmniInput, Stream[OpenAIChatCompletionChunk]]):
@@ -49,9 +47,7 @@ class OmniTask(Task[OmniInput, Stream[OpenAIChatCompletionChunk]]):
         modalities: List of input modalities other than text.
     """
 
-    model_id: Literal["Qwen/Qwen3-Omni-30B-A3B-Instruct"] = (
-        "Qwen/Qwen3-Omni-30B-A3B-Instruct"
-    )
+    model_id: str = "Qwen/Qwen3-Omni-30B-A3B-Instruct"
     modalities: list[EncoderModality] = []
     encoder_fission: bool = True
     vocoder_fission: bool = True

@@ -138,7 +138,7 @@ class TaskManagerServicer(task_manager_pb2_grpc.TaskManagerServicer):
 def create_server(task_registry: TaskRegistry) -> tuple[grpc.aio.Server, TaskManagerServicer]:
     """Create the gRPC server for the Task Manager."""
     servicer = TaskManagerServicer(task_registry)
-    server = grpc.aio.server()
+    server = grpc.aio.server(options=[("grpc.max_metadata_size", 64 * 1024)])
     task_manager_pb2_grpc.add_TaskManagerServicer_to_server(servicer, server)
     listen_addr = "[::]:50051"
     server.add_insecure_port(listen_addr)

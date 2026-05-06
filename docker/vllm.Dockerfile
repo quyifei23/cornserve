@@ -2,6 +2,11 @@
 # TODO: Use a multi-stage build to reduce image size
 FROM pytorch/pytorch:2.9.0-cuda12.8-cudnn9-devel AS base
 
+ENV PIP_INDEX_URL=https://mirrors.ustc.edu.cn/pypi/web/simple
+
+RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirrors.ustc.edu.cn/ubuntu/|g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list 2>/dev/null || true \
+    && sed -i 's|http://security.ubuntu.com/ubuntu/|http://mirrors.ustc.edu.cn/ubuntu/|g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list 2>/dev/null || true
+
 RUN apt-get update -y \
     && apt-get install -y --no-install-recommends \
         git \

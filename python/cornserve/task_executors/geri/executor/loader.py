@@ -21,7 +21,7 @@ def get_registry_entry(model_id: str) -> tuple[RegistryEntry, PretrainedConfig |
     """Acquire the Geri model registry entry for the provided model_id.
 
     Args:
-        model_id: Hugging Face model ID.
+        model_id: Hugging Face model ID or local path.
 
     Returns:
         Registry entry for the model and, if found, the HF model config.
@@ -30,18 +30,29 @@ def get_registry_entry(model_id: str) -> tuple[RegistryEntry, PretrainedConfig |
         ValueError: If the model's class name is not found in HF.
         KeyError: If the model type is not found in the registry.
     """
+    import os
+
     logger.info("Looking up Geri model registry for model %s", model_id)
 
     class_name: str | None = None
     config: PretrainedConfig | None = None
+    is_local = os.path.isdir(model_id)
 
-    # First, try to download and parse model_index.json to get the pipeline class name
+    # First, try to load model_index.json to get the pipeline class name
     try:
-        model_index_path = hf_hub_download(model_id, filename="model_index.json")
-        with open(model_index_path) as f:
-            model_index = json.load(f)
-        class_name = model_index["_class_name"]
-        logger.info("Found pipeline class: %s", class_name)
+        if is_local:
+            model_index_path = os.path.join(model_id, "model_index.json")
+            if os.path.isfile(model_index_path):
+                with open(model_index_path) as f:
+                    model_index = json.load(f)
+                class_name = model_index["_class_name"]
+                logger.info("Found pipeline class from local path: %s", class_name)
+        else:
+            model_index_path = hf_hub_download(model_id, filename="model_index.json")
+            with open(model_index_path) as f:
+                model_index = json.load(f)
+            class_name = model_index["_class_name"]
+            logger.info("Found pipeline class: %s", class_name)
     except Exception:
         logger.warning("Failed to load model_index.json from %s", model_id)
 
@@ -51,11 +62,30 @@ def get_registry_entry(model_id: str) -> tuple[RegistryEntry, PretrainedConfig |
             config = AutoConfig.from_pretrained(
                 model_id,
                 trust_remote_code=True,
+                local_files_only=is_local,
             )
             class_name = config.model_type
             logger.info("Found model class: %s", class_name)
         except Exception:
-            logger.exception("Failed to load config from %s", model_id)
+            if is_local:
+                # transformers may reject absolute paths via HF repo_id validation;
+                # load config.json directly from the local directory.
+                try:
+                    config_path = os.path.join(model_id, "config.json")
+                    with open(config_path) as f:
+                        config_dict = json.load(f)
+                    model_type = config_dict.pop("model_type", None)
+                    if model_type is None:
+                        raise ValueError("config.json missing 'model_type' field")
+                    config = AutoConfig.for_model(
+                        model_type, trust_remote_code=True, **config_dict
+                    )
+                    class_name = config.model_type
+                    logger.info("Found model class from local config: %s", class_name)
+                except Exception:
+                    logger.exception("Failed to load config from %s", model_id)
+            else:
+                logger.exception("Failed to load config from %s", model_id)
 
     # Without the class name, it's not possible to find the registry entry
     if class_name is None:

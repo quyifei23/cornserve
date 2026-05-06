@@ -8,7 +8,6 @@ import os
 import tempfile
 
 import filelock
-import huggingface_hub
 import safetensors
 import torch
 import transformers
@@ -56,50 +55,101 @@ def get_safetensors_weight_dict(
     Returns:
         A dictionary mapping weight names to tensors.
     """
-    # Select the first pattern with matching files on the hub
-    file_list = HfApi().list_repo_files(model_name_or_path, revision=revision)
-    weight_files = fnmatch.filter(file_list, "*.safetensors")
-    if not weight_files:
-        raise FileNotFoundError("No .safetensors files found in the model repo.")
+    is_local = os.path.isdir(model_name_or_path)
+
+    if is_local:
+        # Local path: discover safetensors files directly from the directory.
+        weight_files = sorted(
+            f for f in os.listdir(model_name_or_path) if fnmatch.fnmatch(f, "*.safetensors")
+        )
+        if not weight_files:
+            raise FileNotFoundError(
+                f"No .safetensors files found in local path: {model_name_or_path}"
+            )
+    else:
+        # Try to list repo files (requires network; fails with HF_HUB_OFFLINE=1).
+        # Fall back to broad patterns so cached files can still be loaded.
+        try:
+            file_list = HfApi().list_repo_files(model_name_or_path, revision=revision)
+            weight_files = fnmatch.filter(file_list, "*.safetensors")
+            if not weight_files:
+                raise FileNotFoundError("No .safetensors files found in the model repo.")
+        except Exception:
+            logger.warning(
+                "Failed to list repo files for %s, will rely on local cache.",
+                model_name_or_path,
+            )
+            weight_files = []
 
     # Use file lock to prevent multiple processes from
     # downloading the same model weights at the same time.
     with with_lock(model_name_or_path, cache_dir):
         # Try to filter the list of safetensors files using the index and prefix.
         # Note that not all repositories have an index file.
-        try:
-            index_file_path = hf_hub_download(
+        if is_local:
+            index_file_path = os.path.join(
+                model_name_or_path, transformers.utils.SAFE_WEIGHTS_INDEX_NAME
+            )
+            if os.path.isfile(index_file_path):
+                with open(index_file_path) as f:
+                    weight_map = json.load(f)["weight_map"]
+                weight_files_set: set[str] = set()
+                for weight_name, weight_file in weight_map.items():
+                    if any(weight_name.startswith(p) for p in weight_prefixes):
+                        weight_files_set.add(weight_file)
+                weight_files = sorted(weight_files_set)
+                logger.info(
+                    "Safetensors files (filtered by index): %s",
+                    weight_files,
+                )
+        else:
+            try:
+                index_file_path = hf_hub_download(
+                    model_name_or_path,
+                    filename=transformers.utils.SAFE_WEIGHTS_INDEX_NAME,
+                    cache_dir=cache_dir,
+                    revision=revision,
+                )
+                with open(index_file_path) as f:
+                    weight_map = json.load(f)["weight_map"]
+                weight_files_set = set()
+                for weight_name, weight_file in weight_map.items():
+                    if any(weight_name.startswith(p) for p in weight_prefixes):
+                        weight_files_set.add(weight_file)
+                weight_files = sorted(weight_files_set)
+                logger.info(
+                    "Safetensors file to download (filtered by index): %s",
+                    weight_files,
+                )
+            except Exception:
+                if weight_files:
+                    logger.info(
+                        "No safetensors index file found. Downloading all .safetensors files: %s",
+                        weight_files,
+                    )
+                else:
+                    logger.info(
+                        "No safetensors index file found and repo file list unavailable. "
+                        "Falling back to broad pattern."
+                    )
+                    weight_files = ["*.safetensors"]
+
+        if is_local:
+            hf_dir = model_name_or_path
+        else:
+            # Download the safetensors files
+            hf_dir = snapshot_download(
                 model_name_or_path,
-                filename=transformers.utils.SAFE_WEIGHTS_INDEX_NAME,
+                allow_patterns=weight_files,
                 cache_dir=cache_dir,
                 revision=revision,
             )
-            # Maps weight names to the safetensors file they are stored in
-            with open(index_file_path) as f:
-                weight_map = json.load(f)["weight_map"]
-            weight_files_set: set[str] = set()
-            for weight_name, weight_file in weight_map.items():
-                # Only keep weights that start with the prefix
-                if any(weight_name.startswith(p) for p in weight_prefixes):
-                    weight_files_set.add(weight_file)
-            weight_files = sorted(weight_files_set)
-            logger.info(
-                "Safetensors file to download (filtered by index): %s",
-                weight_files,
-            )
-        except huggingface_hub.errors.EntryNotFoundError:
-            logger.info(
-                "No safetensors index file found. Downloading all .safetensors files: %s",
-                weight_files,
-            )
 
-        # Download the safetensors files
-        hf_dir = snapshot_download(
-            model_name_or_path,
-            allow_patterns=weight_files,
-            cache_dir=cache_dir,
-            revision=revision,
-        )
+        # If we used a broad pattern, discover the actual files that were found
+        if weight_files == ["*.safetensors"]:
+            weight_files = sorted(
+                f for f in os.listdir(hf_dir) if fnmatch.fnmatch(f, "*.safetensors")
+            )
 
     # Build weight dict
     weight_dict = {}

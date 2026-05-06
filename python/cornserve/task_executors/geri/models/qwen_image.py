@@ -131,8 +131,16 @@ class QwenImageModel(BatchGeriModel):
             config: If supplied, the lookup to HF using model_id will be skipped, and the
                 hidden size will be extracted directly from config.
         """
+        import json as _json
+        import os as _os
+
         if isinstance(config, Qwen2_5_VLConfig):
             return config.hidden_size
+        if _os.path.isdir(model_id):
+            config_path = _os.path.join(model_id, "text_encoder", "config.json")
+            with open(config_path) as f:
+                config_dict = _json.load(f)
+            return config_dict.get("hidden_size", 0)
         config = AutoConfig.from_pretrained(
             model_id,
             subfolder="text_encoder",

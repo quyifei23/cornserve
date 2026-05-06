@@ -45,10 +45,21 @@ class TaskExecutionDescriptor(BaseModel, ABC, Generic[TaskT, InputT, OutputT]):
         Returns:
             A list of tuples: name, host path, container path.
         """
-        return [
+        volumes = [
             ("hf-cache", constants.VOLUME_HF_CACHE, "/root/.cache/huggingface"),
             ("shm", constants.VOLUME_SHM, "/dev/shm"),
+            ("models", "/data/models", "/data/models"),
         ]
+        # Dev mode: mount source code to avoid rebuilding Docker images.
+        # Set CORNSERVE_DEV_SRC=1 and CORNSERVE_DEV_SRC_DIR to your repo root.
+        import os
+
+        if os.environ.get("CORNSERVE_DEV_SRC") == "1":
+            src_dir = os.environ.get("CORNSERVE_DEV_SRC_DIR", os.getcwd())
+            volumes.append(
+                ("cornserve-python-src", f"{src_dir}/python", "/workspace/cornserve/python"),
+            )
+        return volumes
 
     def get_service_ports(self, gpus: list[GPU]) -> list[tuple[str, int]]:
         """Get the additional service ports for the task executor."""
@@ -58,6 +69,8 @@ class TaskExecutionDescriptor(BaseModel, ABC, Generic[TaskT, InputT, OutputT]):
         """Get the additional environment variables for the task executor."""
         return [
             ("CUDA_VISIBLE_DEVICES", ",".join(str(gpu.local_rank) for gpu in gpus)),
+            ("HF_HUB_OFFLINE", "1"),
+            ("TRANSFORMERS_OFFLINE", "1"),
         ]
 
     def get_kubernetes_envs(self, gpus: list[GPU]) -> list[kclient.V1EnvVar]:

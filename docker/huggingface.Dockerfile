@@ -1,8 +1,13 @@
 FROM pytorch/pytorch:2.9.0-cuda12.8-cudnn9-runtime
 
+ENV PIP_INDEX_URL=https://mirrors.ustc.edu.cn/pypi/web/simple
+
 ADD ./python /workspace/cornserve/python
 
 WORKDIR /workspace/cornserve/python
+RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirrors.ustc.edu.cn/ubuntu/|g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list 2>/dev/null || true \
+    && sed -i 's|http://security.ubuntu.com/ubuntu/|http://mirrors.ustc.edu.cn/ubuntu/|g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list 2>/dev/null || true
+
 RUN apt-get update \
       && apt-get install -y --no-install-recommends curl \
       && rm -rf /var/lib/apt/lists/* \

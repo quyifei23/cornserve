@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Literal
-
 from cornserve.task.base import Stream, TaskOutput, UnitTask
 from cornserve.task.forward import DataForward, Tensor
 
@@ -32,9 +30,7 @@ class OmniTalkerVocoderTask(
         model_id: The ID of the model to use for the task.
     """
 
-    model_id: Literal["Qwen/Qwen3-Omni-30B-A3B-Instruct"] = (
-        "Qwen/Qwen3-Omni-30B-A3B-Instruct"
-    )
+    model_id: str = "Qwen/Qwen3-Omni-30B-A3B-Instruct"
 
     def make_name(self) -> str:
         """Create a concise string representation of the task."""
@@ -61,9 +57,7 @@ class OmniTalkerEmbeddingTask(
         model_id: The ID of the model to use for the task.
     """
 
-    model_id: Literal["Qwen/Qwen3-Omni-30B-A3B-Instruct"] = (
-        "Qwen/Qwen3-Omni-30B-A3B-Instruct"
-    )
+    model_id: str = "Qwen/Qwen3-Omni-30B-A3B-Instruct"
 
     def make_name(self) -> str:
         """Create a concise string representation of the task."""

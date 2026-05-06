@@ -49,7 +49,7 @@ from cornserve_tasklib.task.unit.llm import OpenAIChatCompletionChunk
 from cornserve.app.base import AppConfig
 
 omni = OmniTask(
-    model_id="Qwen/Qwen3-Omni-30B-A3B-Instruct",
+    model_id="/data/models/Qwen3-Omni-30B-A3B-Instruct",
     modalities=[Modality.IMAGE, Modality.VIDEO, Modality.AUDIO],
     encoder_fission=False,
     vocoder_fission=True,

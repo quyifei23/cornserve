@@ -89,6 +89,7 @@ class OmniTalkerVocoderDescriptor(
         cmd = [
             self.task.model_id,
             "--port", str(port),
+            "--trust-remote-code",
             "--enforce-eager",
             "--cornserve-sidecar-ranks", *[str(gpu.global_rank) for gpu in gpus],
             "--run-talker",
@@ -169,6 +170,7 @@ class OmniTalkerEmbeddingDescriptor(
         cmd = [
             self.task.model_id,
             "--port", str(port),
+            "--trust-remote-code",
             "--enforce-eager",
             "--cornserve-sidecar-ranks", *[str(gpu.global_rank) for gpu in gpus],
             "--run-talker",

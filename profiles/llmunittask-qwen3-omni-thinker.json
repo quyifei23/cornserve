@@ -1,7 +1,7 @@
 {
   "task": {
     "__class__": "LLMUnitTask",
-    "model_id": "Qwen/Qwen3-Omni-30B-A3B-Instruct",
+    "model_id": "/data/models/Qwen3-Omni-30B-A3B-Instruct",
     "receive_embeddings": false,
     "execution_descriptor_name": null
   },

@@ -193,11 +193,25 @@ class Qwen3OmniMoeCode2Wav(StreamGeriModel, nn.Module):
 
     @staticmethod
     def _get_config(model_id: str) -> Qwen3OmniMoeCode2WavConfig:
-        """Fetches config from HF."""
-        hf_config: PretrainedConfig = AutoConfig.from_pretrained(
-            model_id,
-            trust_remote_code=True,
-        )
+        """Fetches config from HF or local path."""
+        import json as _json
+        import os as _os
+
+        if _os.path.isdir(model_id):
+            config_path = _os.path.join(model_id, "config.json")
+            with open(config_path) as f:
+                config_dict = _json.load(f)
+            model_type = config_dict.pop("model_type", None)
+            if model_type is None:
+                raise ValueError("config.json missing 'model_type' field")
+            hf_config = AutoConfig.for_model(
+                model_type, trust_remote_code=True, **config_dict
+            )
+        else:
+            hf_config = AutoConfig.from_pretrained(
+                model_id,
+                trust_remote_code=True,
+            )
         if not isinstance(hf_config, Qwen3OmniMoeConfig):
             raise TypeError(f"Expected Qwen3OmniMoeConfig, but got {type(hf_config).__name__} instead.")
         return hf_config.code2wav_config

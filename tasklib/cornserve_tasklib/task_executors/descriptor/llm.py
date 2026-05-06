@@ -199,7 +199,10 @@ class VLLMDescriptor(
         Returns:
             A list of tuples: name, host path, container path.
         """
-        return [
+        import os
+
+        volumes = [
+            ("models", "/data/models", "/data/models"),
             ("hf-cache", constants.VOLUME_HF_CACHE, "/root/.cache/huggingface"),
             ("shm", constants.VOLUME_SHM, "/dev/shm"),
             (
@@ -208,6 +211,12 @@ class VLLMDescriptor(
                 "/root/.cache/vllm/torch_compile_cache",
             ),
         ]
+        if os.environ.get("CORNSERVE_DEV_SRC") == "1":
+            src_dir = os.environ.get("CORNSERVE_DEV_SRC_DIR", os.getcwd())
+            volumes.append(
+                ("cornserve-python-src", f"{src_dir}/python", "/workspace/cornserve/python"),
+            )
+        return volumes
 
 
 class PrefillVLLMDescriptor(
@@ -298,7 +307,10 @@ class PrefillVLLMDescriptor(
         Returns:
             A list of tuples: name, host path, container path.
         """
-        return [
+        import os
+
+        volumes = [
+            ("models", "/data/models", "/data/models"),
             ("infiniband-class", "/sys/class/infiniband", "/sys/class/infiniband"),
             ("infiniband-dev", "/dev/infiniband", "/dev/infiniband"),
             ("hf-cache", constants.VOLUME_HF_CACHE, "/root/.cache/huggingface"),
@@ -309,6 +321,12 @@ class PrefillVLLMDescriptor(
                 "/root/.cache/vllm/torch_compile_cache",
             ),
         ]
+        if os.environ.get("CORNSERVE_DEV_SRC") == "1":
+            src_dir = os.environ.get("CORNSERVE_DEV_SRC_DIR", os.getcwd())
+            volumes.append(
+                ("cornserve-python-src", f"{src_dir}/python", "/workspace/cornserve/python"),
+            )
+        return volumes
 
     def get_api_url(self, base: str) -> str:
         """Get the task executor's base URL for API calls."""
@@ -490,7 +508,10 @@ class DecodeVLLMDescriptor(
         Returns:
             A list of tuples: name, host path, container path.
         """
-        return [
+        import os
+
+        volumes = [
+            ("models", "/data/models", "/data/models"),
             ("infiniband-class", "/sys/class/infiniband", "/sys/class/infiniband"),
             ("infiniband-dev", "/dev/infiniband", "/dev/infiniband"),
             ("hf-cache", constants.VOLUME_HF_CACHE, "/root/.cache/huggingface"),
@@ -501,6 +522,12 @@ class DecodeVLLMDescriptor(
                 "/root/.cache/vllm/torch_compile_cache",
             ),
         ]
+        if os.environ.get("CORNSERVE_DEV_SRC") == "1":
+            src_dir = os.environ.get("CORNSERVE_DEV_SRC_DIR", os.getcwd())
+            volumes.append(
+                ("cornserve-python-src", f"{src_dir}/python", "/workspace/cornserve/python"),
+            )
+        return volumes
 
     def get_api_url(self, base: str) -> str:
         """Get the task executor's base URL for API calls."""

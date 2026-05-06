@@ -92,7 +92,9 @@ build_and_export() {
   
   if [[ "${REGISTRY}" == "local" ]]; then
     echo "Building image directly within local k3s containerd..."
-    sudo nerdctl build --progress=plain -f "${DOCKERFILE}" -t "${IMAGE}" .
+    K3S_CONTAINERD_SOCK="unix:///run/k3s/containerd/containerd.sock"
+    export CONTAINERD_ADDRESS="${CONTAINERD_ADDRESS:-$K3S_CONTAINERD_SOCK}"
+    sudo --preserve-env=CONTAINERD_ADDRESS nerdctl --namespace k8s.io build --progress=plain -f "${DOCKERFILE}" -t "${IMAGE}" .
   elif [[ "${REGISTRY}" == "none" ]]; then
     docker build --progress=plain -f "${DOCKERFILE}" -t "${IMAGE}" .
   elif [[ "${REGISTRY}" == "minikube" ]]; then
@@ -107,11 +109,9 @@ build_and_export() {
   echo "Successfully built ${IMAGE}"
 }
 
-# Run all builds in parallel
+# Run all builds sequentially (parallel builds can overload network)
 for SERVICE in "${BUILD_LIST[@]}"; do
-  build_and_export "${SERVICE}" &
+  build_and_export "${SERVICE}"
 done
-
-wait
 
 echo "Successfully built and exported images for: ${BUILD_LIST[@]}"

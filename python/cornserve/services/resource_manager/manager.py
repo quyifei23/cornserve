@@ -802,7 +802,10 @@ class ResourceManager:
             logger.info("Created task manager pod %s and service %s", state.pod_name, state.service_name)
 
             # Connect to the task manager gRPC server to initialize it
-            state.channel = grpc.aio.insecure_channel(f"{state.service_name}:{port}")
+            state.channel = grpc.aio.insecure_channel(
+                f"{state.service_name}:{port}",
+                options=[("grpc.max_metadata_size", 64 * 1024)],
+            )
             state.stub = task_manager_pb2_grpc.TaskManagerStub(state.channel)
 
             # Initialize the task manager by providing it with the unit task instance name it will manage
